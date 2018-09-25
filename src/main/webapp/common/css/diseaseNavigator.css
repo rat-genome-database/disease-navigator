@@ -1,0 +1,120 @@
+.speciesHeader {
+    color:#5D5C61;
+    size:20px;
+    font-family:Arial;
+    ont-weight:700;
+}
+.pageTitleBar {
+
+    background-color:#2598C5;
+    ackground-color:#B1A296;
+    padding-left:0px;
+    padding-bottom:1px;
+
+}
+.pageTitle {
+    background-color:#2598C5;
+    ackground-color:#B1A296;
+    color:white;
+    font-size:22px;
+    font-family:Arial;
+
+}
+.orthoGeneBox {
+    border:2px solid #557A95;
+    background-color:#7395ae;
+    border-radius:3px;
+    width:100px;
+    height:20px;
+    padding:5px;
+    font-family:Arial;
+    cursor:pointer;
+    font-size:16px;
+}
+.geneBox {
+    border:2px solid #557A95;
+    border-radius:3px;
+    width:100px;
+    height:20px;
+    padding:5px;
+    font-family:Arial;
+    cursor:pointer;
+    font-size:16px;
+}
+
+.diseaseTitle {
+    padding-top:15px;
+    padding-left:5px;
+    font-size:24px;
+    font-family:Arial;
+}
+.diseaseDescription {
+    padding-top:3px;
+    padding-left:5px;
+    font-size:14px;
+    font-family:Arial;
+    width:800px;
+
+}
+
+.diseaseDescription2 {
+    padding:10px;
+    margin:10px;
+    font-size:14px;
+    font-family:Arial;
+    idth:800px;
+    background-color:white;
+    border-radius:25px;
+
+}
+
+.pageStyle {
+
+    order:3px solid #2598C5;
+    border:3px solid #B1A296;
+    border-radius:3px;
+}
+.selectedList {
+    border:0px solid black;
+    height:500px;
+    overflow-y:scroll;
+    font-family:Arial;
+
+}
+.container {
+    border:1px solid black;
+}
+.toolOption {
+    opacity:.5;
+    border:3px solid white;
+    cursor:pointer;
+    font-family:Arial;
+    background-color:#C1C9D1;
+}
+
+
+.toolMenu {
+    border-left:2px solid #B0A295;
+    position:fixed;
+    float:right;
+    right:0;
+    top:0;
+    width:400px;
+    height:1000px;
+    ackground-color:#C1C9D1;
+    background-color:#B0A295;
+    opacity:1;
+    ackground-color:white;
+
+}
+
+.toolMenuGroupTitle {
+    margin-top:10px;
+    padding-left:10px;
+    padding:5px;
+    font-family:Arial;
+    font-weight:700;
+    background-color:white;
+    color:#246096;
+    border-top-left-radius: 10px;
+}
