@@ -952,6 +952,8 @@
 
             ctrl.selectAllGenes = function (species) {
 
+                ctrl.deselectAllGenes(species);
+
                 var geneArray =[];
 
                 if (species == "Human") {
@@ -961,8 +963,6 @@
                 }else if (species == "Rat") {
                     geneArray=$scope.ratGenes;
                 }
-
-                alert($scope.genes.length);
 
                 var i=0;
                 for (var i=0; i<geneArray.length; i++) {
