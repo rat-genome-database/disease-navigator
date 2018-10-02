@@ -410,7 +410,7 @@
 
             ctrl.mgiExprReport = function () {
 
-                var msg = "<br>More than one mouse gene has been selected.  Please select a gene from the list below to view the report at the GTex<br><br>";
+                var msg = "<br>More than one mouse gene has been selected.  Please select a gene from the list below to view the report at the GTEx<br><br>";
                 var link=""
 
                 var genes = this.getGenesForSpeices("Mouse");
@@ -447,12 +447,17 @@
                     return;
                 }
 
+                msg += this.formatTableSymbol(genes, "https://www.gtexportal.org/home/gene/");
+
+                /*
                 for (var i=0; i<genes.length; i++) {
                         link = "https://www.gtexportal.org/home/gene/" + genes[i].symbol;
                         msg += "<a target='_blank' href='" + link + "'>" + genes[i].symbol + "</a><br>";
                 }
+                */
 
                 if (genes.length == 1) {
+                    link = "https://www.gtexportal.org/home/gene/" + genes[0].symbol;
                     window.open(link);
                     return;
                 }
@@ -466,7 +471,7 @@
 
             ctrl.navAGRGene = function () {
 
-                var msg = "<br>More than one gene has been selected.  Please select a gene from the list below to view the report at the Alliance<br><br>";
+                var msg = "<br>More than one human gene has been selected.  Please select a gene from the list below to view report at the Alliance of Genome Resources<br><br>";
                 var link=""
 
                 var genes = this.getGenesForSpeices("Human");
@@ -474,12 +479,17 @@
                     return;
                 }
 
+                msg += this.formatTableHGNC(genes, "http://www.alliancegenome.org/gene/");
+
+                /*
                 for (var i=0; i<genes.length; i++) {
                         link = "http://www.alliancegenome.org/gene/" + $scope.hgncMap[genes[i].primaryId];
                         msg += "<a target='_blank' href='" + link + "'>" + genes[i].symbol + "</a><br>";
                 }
+                */
 
                 if (genes.length == 1) {
+                    link = "http://www.alliancegenome.org/gene/" + $scope.hgncMap[genes[0].primaryId];
                     window.open(link);
                     return;
                 }
@@ -502,11 +512,16 @@
                     return;
                 }
 
+                msg += this.formatTable(genes, "http://www.informatics.jax.org/marker/");
+
+                /*
                 for (var i=0; i<genes.length; i++) {
                     link = "http://www.informatics.jax.org/marker/" + $scope.mgiMap[genes[i].primaryId];
                     msg += "<a target='_blank' href='" + link + "'>" + genes[i].symbol + "</a><br>";
                 }
+                */
                 if (genes.length == 1) {
+                    link = "http://www.informatics.jax.org/marker/" + $scope.mgiMap[genes[0].primaryId];
                     window.open(link);
                     return;
                 }
@@ -528,11 +543,17 @@
                     return;
                 }
 
+                msg += this.formatTableHGNC(genes, "https://www.genenames.org/cgi-bin/gene_symbol_report?hgnc_id=");
+
+                /*
                 for (var i=0; i<genes.length; i++) {
                     link = "https://www.genenames.org/cgi-bin/gene_symbol_report?hgnc_id=" + $scope.hgncMap[genes[i].primaryId];
                     msg += "<a target='_blank' href='" + link + "'>" + genes[i].symbol + "</a><br>";
                 }
+                */
+
                 if (genes.length == 1) {
+                    link = "https://www.genenames.org/cgi-bin/gene_symbol_report?hgnc_id=" + $scope.hgncMap[genes[0].primaryId];
                     window.open(link);
                     return;
                 }
@@ -573,9 +594,69 @@
 
             }
 
+            ctrl.formatTableSymbol = function(genes, url) {
+
+                var msg = "";
+
+                var modVal=10;
+
+                if (genes.length > 10) {
+                    modVal = Math.round(genes.length / 4);
+                }
+
+
+                msg += "<div style=' float:left;'>";
+                for (var i=0; i<genes.length ; i++) {
+
+
+                    link=url + genes[i].primaryId;
+                    msg += "<div style='width:140px; font-size:18px; height:30px;'><a target='_blank' href='" + url +  genes[i].symbol + "'>" + genes[i].symbol + "</a></div>";
+
+                    if (i !=0 && i % modVal == 0) {
+                        msg += "</div><div style='float:left;'>";
+                    }
+
+                }
+                msg += "</div>";
+
+                return msg;
+
+            }
+
+            ctrl.formatTableHGNC = function(genes, url) {
+
+                var msg = "";
+
+                var modVal=10;
+
+                if (genes.length > 10) {
+                    modVal = Math.round(genes.length / 4);
+                }
+
+
+                msg += "<div style=' float:left;'>";
+                for (var i=0; i<genes.length ; i++) {
+
+
+                    link=url + genes[i].primaryId;
+                    msg += "<div style='width:140px; font-size:18px; height:30px;'><a target='_blank' href='" + url +  $scope.hgncMap[genes[i].primaryId] + "'>" + genes[i].symbol + "</a></div>";
+
+                    if (i !=0 && i % modVal == 0) {
+                        msg += "</div><div style='float:left;'>";
+                    }
+
+                }
+                msg += "</div>";
+
+                return msg;
+
+            }
+
+
+
             ctrl.rgdGeneReport = function (){
 
-                var msg = "<br>More than one Rat Gene has been selected.  Please select a gene from the list below to view the report at RGD<br><br>";
+                var msg = "<br>More than one rat gene has been selected.  Please select a gene from the list below to view the report at RGD<br><br>";
                 var link="";
 
                 var genes = this.getGenesForSpeices("Rat");
@@ -619,7 +700,14 @@
                 var msg = "";
                 var link=""
 
+
                 var genes = this.getGenesForSpeices("Rat");
+
+                //if (genes.length > 500) {
+                    alert(genes.length);
+                //}
+
+
                 if (genes.length==0) {
                     return;
                 }
@@ -743,7 +831,49 @@
                 document.getElementById("modalMsg").innerHTML = msg;
 
             }
+
             ctrl.navDownload = function (){
+
+
+                //get Annotated Genes
+                var obj = {};
+
+                obj.accId=termAcc;
+                obj.speciesTypeKeys = [1,2,3];
+                obj.evidenceCodes=['EXP','IAGP','IDA','IED','IEP','IGI','IMP','IPI','IPM','QTM'];
+
+                $http({
+                    method: 'POST',
+                    url: "<%=host%>/rgdws/genes/annotation",
+                    data: obj
+
+                }).then(function successCallback(response) {
+                    //$scope.annotatedGenes = response.data;
+                    alert(response.data);
+                    /*
+                    for (i=0; i<$scope.annotatedGenes.length; i++) {
+                        $scope.annotationMap[$scope.annotatedGenes[i].rgdId] = $scope.annotatedGenes[i];
+
+                    }
+
+                    ctrl.getOrthologs();
+                    */
+                }, function errorCallback(response) {
+                    alert("ERRROR:" + response.data);
+                });
+
+
+
+                /*
+                const rows = [["name1", "city1", "some other info"], ["name2", "city2", "more info"]];
+                let csvContent = "data:text/csv;charset=utf-8,";
+                rows.forEach(function(rowArray){
+                    let row = rowArray.join(",");
+                    csvContent += row + "\r\n";
+                });
+                */
+
+
 
                 msg="<br>Not Implemented";
 
@@ -969,6 +1099,12 @@
                     var obj = geneArray[i];
                     var div = document.getElementById(obj.rgdId);
 
+                    //need to fix this.  hypertension and mouse causes issue
+                    if (div==null) {
+                        //alert(obj.rgdId);
+                        continue;
+                    }
+
                     this.selectGene(div, obj.rgdId,obj.symbol,species);
 
                 }
@@ -1062,6 +1198,7 @@
 
             ctrl.selectGene = function (obj, primaryId, symbol, species) {
 
+                if (obj==null) alert(symbol);
 
                 obj.style.borderColor="#FEBE54";
                 obj.style.backgroundColor="#B0A295";
@@ -1147,7 +1284,7 @@
             <td width="19">&nbsp;</td>
             <td align="center" width="112"><div class="speciesHeader">Rat<input  ng-model="allRat"  ng-change="dm.selectAll($event,'Rat')"  type="checkbox"/></div></td>
             <td width="70">&nbsp;</td>
-            <td width="150" valign="top">Genes Selected</td>
+            <td width="150" valign="top" class="speciesHeader">Genes Selected</td>
         </TR>
     </table>
 
@@ -1191,7 +1328,7 @@
                     <div class="selectedList" >
 
                         <div ng-repeat="gene in genes" style="border-bottom:1px solid black;padding-top:5px; padding-bottom:5px;vertical-align:top;">
-                            <img ng-click="dm.removeGene(gene)" src="/navigator/common/images/del.jpg"/>&nbsp;&nbsp;&nbsp;&nbsp;<span ng-bind-html="gene.symbol"></span><span style="font-size:10px;">({{gene.species}})</span>
+                            <img ng-click="dm.removeGene(gene)" src="/navigator/common/images/del.jpg"/>&nbsp;&nbsp;&nbsp;&nbsp;<span ng-bind-html="gene.symbol"></span><span style="font-size:10px;">&nbsp;({{gene.species}})</span>
                         </div>
                     </div>
                 </td>
@@ -1269,7 +1406,7 @@
                     <table>
                         <tr>
                             <td><img src="/navigator/common/images/gtex.png" height="10" idth="10"/></td>
-                            <td>GteX<br>
+                            <td>GTEx<br>
                             </td>
                         </tr>
                     </table>
@@ -1352,6 +1489,21 @@
                 </div>
             </td>
             <td>
+                <div id="a2" class="toolOption" ng-click="dm.navDownload()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
+                    <table>
+                        <tr>
+                            <td><img ng-click="dm.navDownload()" src="/navigator/common/images/excel60.png" height="10" idth="100"/></td>
+                            <td>Download Annotations</td>
+                        </tr>
+                    </table>
+                </div>
+
+            </td>
+
+        </tr>
+        <!--
+        <tr>
+            <td>
                 <div id="a1" class="toolOption" ng-click="dm.navReferences()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
                         <tr>
@@ -1363,19 +1515,7 @@
 
             </td>
         </tr>
-        <tr>
-            <td>
-                <div id="a2" class="toolOption" ng-click="dm.navDownload()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
-                    <table>
-                        <tr>
-                            <td><img ng-click="dm.navDownload()" src="/navigator/common/images/excel60.png" height="10" idth="100"/></td>
-                            <td>Download Annotations</td>
-                        </tr>
-                    </table>
-                </div>
-
-            </td>
-        </tr>
+        -->
     </table>
 
 
@@ -1386,10 +1526,6 @@
         <br>
 
         <div class="diseaseDescription2"><span style="font-size:16px; font-weight:700">{{ term.term }}</span><br>{{ term.definition }}</div>
-
-
-    <!-- https://www.gtexportal.org/home/gene/A2M-->
-
 
 </div>
 
