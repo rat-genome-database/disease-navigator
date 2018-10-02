@@ -1501,6 +1501,7 @@
             <td colspan="3"><div class="toolMenuGroupTitle" >Additional&nbsp;Analysis</div></td>
         </tr>
         <tr>
+            <!--
             <td>
                 <div id="r4" class="toolOption" ng-click="dm.navOlga()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
@@ -1511,6 +1512,8 @@
                     </table>
                 </div>
             </td>
+            -->
+
             <td>
                 <div id="r5" class="toolOption" ng-click="dm.navGA()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
