@@ -704,7 +704,7 @@
                 var genes = this.getGenesForSpeices("Rat");
 
                 //if (genes.length > 500) {
-                    alert(genes.length);
+                    //alert(genes.length);
                 //}
 
 
@@ -1198,7 +1198,7 @@
 
             ctrl.selectGene = function (obj, primaryId, symbol, species) {
 
-                if (obj==null) alert(symbol);
+                //if (obj==null) alert(symbol);
 
                 obj.style.borderColor="#FEBE54";
                 obj.style.backgroundColor="#B0A295";
