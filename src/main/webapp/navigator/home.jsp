@@ -17,7 +17,7 @@
 <script type="text/javascript" src="/navigator/common/angular/1.4.8/angular-sanitize.js"></script>
 
 <%
-    String host = "http://localhost:8080";
+    String host = "http://rgd.mcw.edu";
 %>
 
 <script>
