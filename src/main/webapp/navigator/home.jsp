@@ -512,7 +512,7 @@
                     return;
                 }
 
-                msg += this.formatTable(genes, "http://www.informatics.jax.org/marker/");
+                msg += this.formatTableMGI(genes, "http://www.informatics.jax.org/marker/");
 
                 /*
                 for (var i=0; i<genes.length; i++) {
@@ -564,6 +564,39 @@
                 document.getElementById("modalMsg").innerHTML=msg;
 
             }
+
+
+
+
+            ctrl.formatTableMGI = function(genes, url) {
+
+                var msg = "";
+
+                var modVal=10;
+
+                if (genes.length > 10) {
+                    modVal = Math.round(genes.length / 4);
+                }
+
+
+                msg += "<div style=' float:left;'>";
+                for (var i=0; i<genes.length ; i++) {
+
+
+                    link=url + genes[i].primaryId;
+                    msg += "<div style='width:140px; font-size:18px; height:30px;'><a target='_blank' href='" + url +  $scope.mgiMap[genes[0].primaryId] + "'>" + genes[i].symbol + "</a></div>";
+
+                    if (i !=0 && i % modVal == 0) {
+                        msg += "</div><div style='float:left;'>";
+                    }
+
+                }
+                msg += "</div>";
+
+                return msg;
+
+            }
+
 
             ctrl.formatTable = function(genes, url) {
 
