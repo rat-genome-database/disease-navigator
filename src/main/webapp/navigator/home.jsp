@@ -183,8 +183,6 @@
 
                     row++;
 
-
-                    //if (i > 5) break;
                 }
 
 
@@ -226,6 +224,39 @@
                 });
 
             }
+
+
+            ctrl.getAnnotations = function(termAcc) {
+
+                //get Annotated Genes
+                var obj = {};
+
+                obj.accId=termAcc;
+                obj.speciesTypeKeys = [1,2,3];
+                obj.evidenceCodes=['EXP','IAGP','IDA','IED','IEP','IGI','IMP','IPI','IPM','QTM'];
+
+                $http({
+                    method: 'POST',
+                    url: "<%=host%>/rgdws/genes/annotation",
+                    data: obj
+
+                }).then(function successCallback(response) {
+                    $scope.annotatedGenes = response.data;
+
+                    for (i=0; i<$scope.annotatedGenes.length; i++) {
+                        $scope.annotationMap[$scope.annotatedGenes[i].rgdId] = $scope.annotatedGenes[i];
+
+                    }
+
+                    //ctrl.initAnnotationMap();
+                    ctrl.getOrthologs();
+
+                }, function errorCallback(response) {
+                    alert("ERRROR:" + response.data);
+                });
+
+            }
+
 
 
             ctrl.getOrthologs = function() {
@@ -436,6 +467,31 @@
 
             }
 
+            ctrl.navClinvar = function () {
+
+                var msg = "<br>More than one human gene has been selected.  Please select a gene from the list below to view the report at the GTex<br><br>";
+                var link=""
+
+                var genes = this.getGenesForSpeices("Human");
+                if (genes.length==0) {
+                    return;
+                }
+
+                msg += this.formatTableClinvar(genes, "https://www.ncbi.nlm.nih.gov/clinvar/?term=");
+
+                if (genes.length == 1) {
+                    link = "https://www.ncbi.nlm.nih.gov/clinvar/?term=" + genes[0].symbol + "[gene]";
+                    window.open(link);
+                    return;
+                }
+
+                $scope.modalTitle="GTex Expression";
+                $('#myModal').modal('show');
+
+                document.getElementById("modalMsg").innerHTML=msg;
+
+            }
+
 
             ctrl.navGTEX = function () {
 
@@ -545,13 +601,6 @@
 
                 msg += this.formatTableHGNC(genes, "https://www.genenames.org/cgi-bin/gene_symbol_report?hgnc_id=");
 
-                /*
-                for (var i=0; i<genes.length; i++) {
-                    link = "https://www.genenames.org/cgi-bin/gene_symbol_report?hgnc_id=" + $scope.hgncMap[genes[i].primaryId];
-                    msg += "<a target='_blank' href='" + link + "'>" + genes[i].symbol + "</a><br>";
-                }
-                */
-
                 if (genes.length == 1) {
                     link = "https://www.genenames.org/cgi-bin/gene_symbol_report?hgnc_id=" + $scope.hgncMap[genes[0].primaryId];
                     window.open(link);
@@ -566,6 +615,34 @@
             }
 
 
+            ctrl.formatTableClinvar = function(genes, url) {
+
+                var msg = "";
+
+                var modVal=10;
+
+                if (genes.length > 10) {
+                    modVal = Math.round(genes.length / 4);
+                }
+
+
+                msg += "<div style=' float:left;'>";
+                for (var i=0; i<genes.length ; i++) {
+
+
+                    link=url + genes[i].primaryId;
+                    msg += "<div style='width:140px; font-size:18px; height:30px;'><a target='_blank' href='" + url +  genes[0].symbol + "[gene]" + "'>" + genes[i].symbol + "</a></div>";
+
+                    if (i !=0 && i % modVal == 0) {
+                        msg += "</div><div style='float:left;'>";
+                    }
+
+                }
+                msg += "</div>";
+
+                return msg;
+
+            }
 
 
             ctrl.formatTableMGI = function(genes, url) {
@@ -1462,6 +1539,18 @@
         </tr>
         <tr>
             <td>
+                <div id="h2" class="toolOption" ng-click="dm.navClinvar()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
+                    <table>
+                        <tr>
+                            <td><img src="/navigator/common/images/dbGaP_logo.jpg" height="10" idth="10"/></td>
+                            <td>ClinVar<br>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+            </td>
+            <td>
                 <div id="h2" class="toolOption" ng-click="dm.navTopMed()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
                         <tr>
@@ -1473,6 +1562,7 @@
                 </div>
 
             </td>
+            </tr><tr>
             <td>
                 <div id="r2" class="toolOption" ng-click="dm.navVV()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
@@ -1489,7 +1579,7 @@
                     <table>
                         <tr>
                             <td><img ng-click="dm.navVVDamaging()" src="/navigator/common/images/polyphen.png" height="10" idth="100"/></td>
-                            <td>Rat (Polyphen)</td>
+                            <td>Rat<br>(Polyphen)</td>
                         </tr>
                     </table>
                 </div>
