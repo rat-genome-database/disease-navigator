@@ -661,7 +661,7 @@
 
 
                     link=url + genes[i].primaryId;
-                    msg += "<div style='width:140px; font-size:18px; height:30px;'><a target='_blank' href='" + url +  $scope.mgiMap[genes[0].primaryId] + "'>" + genes[i].symbol + "</a></div>";
+                    msg += "<div style='width:140px; font-size:18px; height:30px;'><a target='_blank' href='" + url +  $scope.mgiMap[genes[i].primaryId] + "'>" + genes[i].symbol + "</a></div>";
 
                     if (i !=0 && i % modVal == 0) {
                         msg += "</div><div style='float:left;'>";
