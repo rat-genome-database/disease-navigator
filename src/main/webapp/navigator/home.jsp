@@ -87,8 +87,37 @@
             $scope.evidence['QTM']=true;
             $scope.evidence['ISS']=false;
 
+            ctrl.reset = function () {
+                $scope.genes = [];
+
+                $scope.mgiMap={};
+                $scope.hgncMap={} ;
+                $scope.gtexMap=[];
+                $scope.term = {};
+
+                $scope.humanGenes=[];
+                $scope.mouseGenes=[];
+                $scope.ratGenes=[];
+
+                $scope.annotatedGenes={};
+                $scope.annotationMap={};
+
+                $scope.grid=new Array();
+                $scope.grid=[$scope.humanGenes.length];
+
+                $scope.allHuman=false;
+                $scope.allMouse=false;
+                $scope.allRat=false;
+
+                $scope.grid=new Array();
+
+                $scope.callbackFunction="";
+                $scope.speciesSelected="";
+
+            }
 
             ctrl.selectEvidence = function ($event,evidence) {
+                ctrl.reset();
                 $scope.selectedEvidenceCodes=new Array();
 
                 Object.keys($scope.evidence).forEach( function (key) {
@@ -97,7 +126,6 @@
                     }
                 })
 
-                alert($scope.selectedEvidenceCodes.length + " calling init");
                 ctrl.initialize();
             }
 
@@ -250,7 +278,6 @@
 
                     }
 
-                    //ctrl.initAnnotationMap();
                     ctrl.getOrthologs();
 
                 }, function errorCallback(response) {
