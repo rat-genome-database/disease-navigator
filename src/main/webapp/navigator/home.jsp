@@ -86,6 +86,7 @@
             $scope.evidence['IPM']=true;
             $scope.evidence['QTM']=true;
             $scope.evidence['ISS']=false;
+            $scope.evidence['ISO']=false;
 
             ctrl.reset = function () {
                 $scope.genes = [];
@@ -133,6 +134,7 @@
 
                  for (i = 0; i < $scope.humanGenes.length; i++) {
 
+                 $scope.grid[i] = new Object();
                  $scope.grid[i] = new Object();
 
                  $scope.grid[i].humanGene = $scope.humanGenes[i];
@@ -624,13 +626,15 @@
                 document.getElementById("Mouse_div").style.display="none";
                 document.getElementById("Rat_div").style.display="none";
 
+                for (var i = 0; i < $scope.genes.length; i++) {
+                    document.getElementById($scope.genes[i].species + "_div").style.display="block";
+                }
+
 
                 var first = $scope.genes[0].species;
                 $scope.callbackFunction=callbackFunction;
                 for (var i = 1; i < $scope.genes.length; i++) {
-                    document.getElementById($scope.genes[i].species + "_div").style.display="block";
                     if ($scope.genes[i].species != first) {
-
                         $('#speciesModal').modal('show');
                         return;
                     }
@@ -662,17 +666,11 @@
                     return;
                 }
 
-                var speciesName="Human";
-                if ($scope.speciesSelected == 2) {
-                    speciesName="Mouse";
-                }else if ($scope.speciesSelected == 3) {
-                    speciesName="Rat";
-                }
 
-                var msg = "<br>More than one " + speciesName + " human gene has been selected.  Please select a gene from the list below to view report at the Alliance of Genome Resources<br><br>";
+                var msg = "<br>More than one " + $scope.speciesSelected + " human gene has been selected.  Please select a gene from the list below to view report at the Alliance of Genome Resources<br><br>";
                 var link=""
 
-                var genes = ctrl.getGenesForSpeices(speciesName);
+                var genes = ctrl.getGenesForSpeices($scope.speciesSelected);
 
                 if (genes.length==0) {
                     return;
@@ -680,8 +678,19 @@
 
                 msg += ctrl.formatTableHGNC(genes, "http://www.alliancegenome.org/gene/");
 
+                var id= $scope.hgncMap[genes[0].primaryId];
+                if ($scope.speciesSelected == "Mouse") {
+                    id=$scope.mgiMap[genes[0].primaryId];
+                }else if ($scope.speciesSelected == "Rat") {
+                    id="RGD:" + genes[0].primaryId;
+                }
+
+
+
+                //alert(JSON.stringify(genes[0]));
+
                 if (genes.length == 1) {
-                    link = "http://www.alliancegenome.org/gene/" + $scope.hgncMap[genes[0].primaryId];
+                    link = "http://www.alliancegenome.org/gene/" + id;
                     window.open(link);
                     return;
                 }
@@ -727,6 +736,8 @@
 
             ctrl.hgncGeneReport = function (){
 
+
+                $scope.speciesSelected="";
                 var msg = "<br>More than one human gene has been selected.  Please select a gene from the list below to view the report at HGNC<br><br>";
                 var link=""
 
@@ -883,9 +894,15 @@
                 msg += "<div style=' float:left;'>";
                 for (var i=0; i<genes.length ; i++) {
 
+                    var id= $scope.hgncMap[genes[i].primaryId];
+                    if ($scope.speciesSelected == "Mouse") {
+                        id=$scope.mgiMap[genes[i].primaryId];
+                    }else if ($scope.speciesSelected == "Rat") {
+                        id="RGD:" + genes[i].primaryId;
+                    }
 
-                    link=url + genes[i].primaryId;
-                    msg += "<div style='width:140px; font-size:18px; height:30px;'><a target='_blank' href='" + url +  $scope.hgncMap[genes[i].primaryId] + "'>" + genes[i].symbol + "</a></div>";
+                    link=url + id;
+                    msg += "<div style='width:140px; font-size:18px; height:30px;'><a target='_blank' href='" + url +  id + "'>" + genes[i].symbol + "</a></div>";
 
                     if (i !=0 && i % modVal == 0) {
                         msg += "</div><div style='float:left;'>";
@@ -1522,9 +1539,11 @@
                 <div class="modal-content" id="rgd-species-modal">
                     <div style="background-color:#2598C5; font-family:Arial; color:white; font-size:20px;padding:5px;">Select a species</div>
                     <br>&nbsp;&nbsp;You have more than one species selected.  Please select a species to continue<br><br>
-                        <div id="Human_div" style="font-size:25px; display:none; margin:20px;"><button class="btn btn-primary" ng-click="dm.selectSpecies('Human')">Human</button></div>
-                        <div id="Mouse_div" style="font-size:25px; display:none; margin:20px;" ><button type="button" ng-click="dm.selectSpecies('Mouse')" class="btn btn-primary">Mouse</button></div>
-                        <div id="Rat_div" style="font-size:25px; display:none; margin:20px;"><button class="btn btn-primary" ng-click="dm.selectSpecies('Rat')">Rat</button></div>
+
+
+                        <div id="Human_div" style="font-size:25px; display:none; margin-left:20px; float:left;"><button class="btn btn-primary" ng-click="dm.selectSpecies('Human')">Human</button></div>
+                        <div id="Mouse_div" style="font-size:25px; display:none; margin-left:20px; float: left;" ><button type="button" ng-click="dm.selectSpecies('Mouse')" class="btn btn-primary">Mouse</button></div>
+                        <div id="Rat_div" style="font-size:25px; display:none; margin-left:20px; float:left;"><button class="btn btn-primary" ng-click="dm.selectSpecies('Rat')">Rat</button></div>
 
                     </table>
                     <br>
@@ -1563,10 +1582,10 @@
     <br>
     <span style="background-color:#7395AE; color:#7395AE;height:10px;width:30px;border-radius:3px;margin-top:10px;margin-left:27px;">&nbsp;&nbsp;&nbsp;&nbsp;</span> Denotes Gene Annotated to <b>{{ term.term }}</b> - Orthology via <b>DIOPT</b>
 
-    <br><br>
 
 
-<div>Evidence:
+
+<div style="margin-left:28px;margin-top:10px;margin-bottom:10px;"><span style="font-weight:700;">Evidence:</span>
     <input ng-model="evidence['EXP']" ng-change="dm.selectEvidence($event)" type="checkbox"/>EXP
     <input ng-model="evidence['IAGP']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IAGP
     <input ng-model="evidence['IDA']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IDA
@@ -1577,8 +1596,9 @@
     <input ng-model="evidence['IPM']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IPM
     <input ng-model="evidence['QTM']" ng-change="dm.selectEvidence($event)" type="checkbox"/>QTM
     <input ng-model="evidence['ISS']" ng-change="dm.selectEvidence($event)" type="checkbox"/>ISS
+    <input ng-model="evidence['ISO']" ng-change="dm.selectEvidence($event)" type="checkbox"/>ISO
 </div>
-<br>
+
 
 
 
@@ -1591,7 +1611,7 @@
             <td align="center" width="112"><div class="speciesHeader">Mouse<input  ng-model="allMouse"  ng-change="dm.selectAll($event,'Mouse')"  type="checkbox"/></div></td>
             <td width="19">&nbsp;</td>
             <td align="center" width="112"><div class="speciesHeader">Rat<input  ng-model="allRat"  ng-change="dm.selectAll($event,'Rat')"  type="checkbox"/></div></td>
-            <td width="70">&nbsp;</td>
+            <td width="80">&nbsp;</td>
             <td width="150" valign="top" class="speciesHeader">Genes Selected</td>
         </TR>
     </table>
@@ -1683,6 +1703,8 @@
                 </div>
 
             </td>
+        </tr>
+        <tr>
             <td>
                 <div id="r1" class="toolOption" ng-click="dm.rgdGeneReport()"  ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
@@ -1693,8 +1715,6 @@
                     </table>
                 </div>
             </td>
-        </tr>
-        <tr>
             <td>
                 <div id="h3" class="toolOption" ng-click="dm.hgncGeneReport()"  ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
@@ -1714,7 +1734,7 @@
                     <table>
                         <tr>
                             <td><img src="/navigator/common/images/gtex.png" height="10" idth="10"/></td>
-                            <td>GTEx<br>
+                            <td>GTEx Multi Gene<br>
                             </td>
                         </tr>
                     </table>
@@ -1725,18 +1745,19 @@
                 <table>
                     <tr>
                         <td><img src="/navigator/common/images/gtex.png" height="10" idth="10"/></td>
-                        <td>GTEx<br>
+                        <td>GTEx Report<br>
                         </td>
                     </tr>
                 </table>
             </div>
         </td>
+    </tr><tr>
             <td>
                 <div id="m2" class="toolOption" ng-click="dm.mgiExprReport()"  ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
                         <tr >
                             <td><img ng-click="dm.mgiExprReport()" src="/navigator/common/images/mgi_logo.gif" height="10" idth="100"/></td>
-                            <td>MGI</td>
+                            <td>MGI Expression</td>
                         </tr>
                     </table>
                 </div>
@@ -1748,7 +1769,7 @@
         </tr>
         <tr>
             <td>
-                <div id="h3" class="toolOption" ng-click="dm.navClinvar()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
+                <div id="h4" class="toolOption" ng-click="dm.navClinvar()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
                         <tr>
                             <td><img src="/navigator/common/images/dbGaP_logo.jpg" height="10" idth="10"/></td>
@@ -1759,6 +1780,7 @@
                 </div>
 
             </td>
+            <!--
             <td>
                 <div id="h4" class="toolOption" ng-click="dm.navTopMed()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
@@ -1771,18 +1793,19 @@
                 </div>
 
             </td>
-            </tr><tr>
+            -->
             <td>
                 <div id="r2" class="toolOption" ng-click="dm.navVV()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
                         <tr>
-                            <td><img ng-click="dm.navVV()" src="/navigator/common/images/polyphen.png" height="10" idth="100"/></td>
+                            <td><img ng-click="dm.navVV()" src="/navigator/common/images/rgd_logo60.png" height="10" idth="100"/></td>
                             <td>Rat Strains</td>
                         </tr>
                     </table>
                 </div>
 
             </td>
+        </tr><tr>
             <td>
                 <div id="r3" class="toolOption" ng-click="dm.navVVDamaging()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
@@ -1811,10 +1834,9 @@
                     </table>
                 </div>
             </td>
-            -->
-
+         -->
             <td>
-                <div id="r5" class="toolOption" ng-click="dm.navGA()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
+                <div id="r4" class="toolOption" ng-click="dm.navGA()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
                         <tr>
                             <td><img ng-click="dm.navGA()" src="/navigator/common/images/gaTool60.png" height="10" idth="100"/></td>
