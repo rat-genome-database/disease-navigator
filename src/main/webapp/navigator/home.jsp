@@ -817,7 +817,7 @@
                 }
                 msg += "</div>";
 
-                return msg;
+                return msg; 
 
             }
 
