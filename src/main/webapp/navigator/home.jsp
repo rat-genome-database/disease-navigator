@@ -1583,8 +1583,6 @@
     <span style="background-color:#7395AE; color:#7395AE;height:10px;width:30px;border-radius:3px;margin-top:10px;margin-left:27px;">&nbsp;&nbsp;&nbsp;&nbsp;</span> Denotes Gene Annotated to <b>{{ term.term }}</b> - Orthology via <b>DIOPT</b>
 
 
-
-
 <div style="margin-left:28px;margin-top:10px;margin-bottom:10px;"><span style="font-weight:700;">Evidence:</span>
     <input ng-model="evidence['EXP']" ng-change="dm.selectEvidence($event)" type="checkbox"/>EXP
     <input ng-model="evidence['IAGP']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IAGP
@@ -1598,10 +1596,6 @@
     <input ng-model="evidence['ISS']" ng-change="dm.selectEvidence($event)" type="checkbox"/>ISS
     <input ng-model="evidence['ISO']" ng-change="dm.selectEvidence($event)" type="checkbox"/>ISO
 </div>
-
-
-
-
 
 
     <table cellspacing=0 cellpadding=0 border="0" style="margin-left:20px; padding-left:5px; border-bottom:2px solid #B1A296;">
@@ -1858,24 +1852,7 @@
             </td>
 
         </tr>
-        <!--
-        <tr>
-            <td>
-                <div id="a1" class="toolOption" ng-click="dm.navReferences()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
-                    <table>
-                        <tr>
-                            <td><img ng-click="dm.navReferences()" src="/navigator/common/images/pubmed.png" height="10" idth="100"/></td>
-                            <td>References</td>
-                        </tr>
-                    </table>
-                </div>
-
-            </td>
-        </tr>
-        -->
     </table>
-
-
         <br>
         <br>
         <br>

@@ -5,6 +5,10 @@ repositories {
   mavenCentral()
 }
 
+war {
+    archiveName = 'navigator.war'
+}
+
 dependencies {
 	
 	compile fileTree(dir: 'lib', include: '*.jar')

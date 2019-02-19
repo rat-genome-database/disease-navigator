@@ -1,80 +1,75 @@
-<%@ page import="edu.mcw.rgd.datamodel.ontologyx.Term" %>
-<%@ page import="edu.mcw.rgd.datamodel.ontology.Annotation" %>
-<%@ page import="edu.mcw.rgd.datamodel.Ortholog" %>
-<%@ page import="edu.mcw.rgd.datamodel.Gene" %>
-<%@ page import="com.google.gson.Gson" %>
-<%@ page import="edu.mcw.rgd.datamodel.XdbId" %>
-<%@ page import="edu.mcw.rgd.dao.impl.*" %>
-<%@ page import="java.util.*" %>
+<html>
 
 <link rel="stylesheet" href="/navigator/common/bootstrap/css/bootstrap.css">
+<link rel="stylesheet" href="/navigator/ui/navigator.css">
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script src="/navigator/common/bootstrap/js/bootstrap.js"></script>
-<link rel="stylesheet" href="/navigator/common/css/diseaseNavigator.css">
-
 <script type="text/javascript" src="/navigator/common/angular/1.4.8/angular.js"></script>
 <script type="text/javascript" src="/navigator/common/angular/1.4.8/angular-sanitize.js"></script>
-
-<%
-    String host = "https://rest.rgd.mcw.edu";
-%>
+<script type="text/javascript" src="/navigator/ui/navigator.js"></script>
 
 <script>
-
 
     function getScope(ctrlName) {
         var sel = 'div[ng-controller="' + ctrlName + '"]';
         return angular.element(sel).scope();
     }
 
+    function getUrlVars() {
+        var vars = {};
+        var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
+            vars[key] = value;
+        });
+        return vars;
+    }
 
     var dmModule = angular.module('dmPage', ['ngSanitize']);
 
-    dmModule.service('ConfigService', function () {
-
-        this.listName="";
-        this.listDescription="";
-        this.geneWatchAttributes=["Nomenclature Changes","New GO Annotation","New Disease Annotation","New Phenotype Annotation","New Pathway Annotation","New PubMed Reference","Altered Strains","New NCBI Transcript/Protein","New Protein Interaction","RefSeq Status Has Changed"];
-        this.username="Sign In";
-
-    });
-
     dmModule.controller('DMController', [
         '$scope','$http',
-
 
         function ($scope, $http) {
 
             var ctrl = this;
 
-            $scope.termAcc="<%=request.getParameter("accId")%>";
-            $scope.genes = [];
+            $scope.serviceHost="https://rest.rgd.mcw.edu";
+            $scope.termAcc=getUrlVars()["accId"];
 
-            $scope.mgiMap={};
-            $scope.hgncMap={} ;
-            $scope.gtexMap=[];
+            $scope.includedSpecies = ["Human","Mouse","Rat"];
+
+            $scope.selectedGenes = [];
             $scope.term = {};
 
-            $scope.humanGenes=[];
-            $scope.mouseGenes=[];
-            $scope.ratGenes=[];
+            //data structure for cross references
+            $scope.xref= [];
+            $scope.xref["mgi"] = {};
+            $scope.xref["hgnc"] = {};
+            $scope.xref["gtex"] = {};
+
+            $scope.genes=[];
+            for (var i in $scope.includedSpecies) {
+                $scope.genes[$scope.includedSpecies[i]] = [];
+            }
 
             $scope.annotatedGenes={};
             $scope.annotationMap={};
 
-            $scope.allHuman=false;
-            $scope.allMouse=false;
-            $scope.allRat=false;
+            //tracks the all selected control
+            $scope.all=[];
+            for (var species in $scope.includedSpecies) {
+                $scope.all[$scope.includedSpecies[i]] = false;
+            }
 
-            $scope.grid=[$scope.humanGenes.length];
+            $scope.grid=[$scope.genes["Human"].length];
 
             $scope.callbackFunction="";
             $scope.speciesSelected="";
 
+            //list of evidence codes selected
             $scope.selectedEvidenceCodes=['EXP','IAGP','IDA','IED','IEP','IGI','IMP','IPI','IPM','QTM'];
-            $scope.evidence={};
 
+            $scope.evidence={};
             $scope.evidence['EXP']=true;
             $scope.evidence['IAGP']=true;
             $scope.evidence['IDA']=true;
@@ -88,27 +83,29 @@
             $scope.evidence['ISS']=false;
             $scope.evidence['ISO']=false;
 
+            //reset the application state
             ctrl.reset = function () {
-                $scope.genes = [];
+                $scope.selectedGenes = [];
 
-                $scope.mgiMap={};
-                $scope.hgncMap={} ;
-                $scope.gtexMap=[];
+                $scope.xref["mgi"]={};
+                $scope.xref["hgnc"]={} ;
+                $scope.xref["gtex"]=[];
+
                 $scope.term = {};
 
-                $scope.humanGenes=[];
-                $scope.mouseGenes=[];
-                $scope.ratGenes=[];
+                for (var i in $scope.includedSpecies) {
+                    $scope.genes[$scope.includedSpecies[i]] = [];
+                }
 
                 $scope.annotatedGenes={};
                 $scope.annotationMap={};
 
                 $scope.grid=new Array();
-                $scope.grid=[$scope.humanGenes.length];
+                $scope.grid=[$scope.genes["Human"].length];
 
-                $scope.allHuman=false;
-                $scope.allMouse=false;
-                $scope.allRat=false;
+                for (var species in $scope.includedSpecies) {
+                    $scope.all[$scope.includedSpecies[i]] = false;
+                }
 
                 $scope.grid=new Array();
 
@@ -117,6 +114,7 @@
 
             }
 
+            //evidence code control
             ctrl.selectEvidence = function ($event,evidence) {
                 ctrl.reset();
                 $scope.selectedEvidenceCodes=new Array();
@@ -132,41 +130,39 @@
 
             ctrl.buildGrid2 = function() {
 
-                 for (i = 0; i < $scope.humanGenes.length; i++) {
+                for (i = 0; i < $scope.genes["Human"].length; i++) {
 
-                 $scope.grid[i] = new Object();
-                 $scope.grid[i] = new Object();
+                    $scope.grid[i] = new Object();
 
-                 $scope.grid[i].humanGene = $scope.humanGenes[i];
-                 $scope.grid[i].humanGene.species = "Human";
+                    $scope.grid[i].humanGene = $scope.genes["Human"][i];
+                    $scope.grid[i].humanGene.species = "Human";
 
-                 if ($scope.annotationMap[$scope.grid[i].humanGene.rgdId]) {
-                 $scope.grid[i].humanGene.styleClass = "orthoGeneBox";
-                 } else {
-                 $scope.grid[i].humanGene.styleClass = "geneBox";
-                 }
+                    if ($scope.annotationMap[$scope.grid[i].humanGene.rgdId]) {
+                        $scope.grid[i].humanGene.styleClass = "orthoGeneBox";
+                    } else {
+                        $scope.grid[i].humanGene.styleClass = "geneBox";
+                    }
 
-                 $scope.grid[i].mouseGene = $scope.mouseGenes[i];
-                 $scope.grid[i].mouseGene.species = "Mouse";
+                    $scope.grid[i].mouseGene = $scope.genes["Mouse"][i];
+                    $scope.grid[i].mouseGene.species = "Mouse";
 
-                 if ($scope.annotationMap[$scope.grid[i].mouseGene.rgdId]) {
-                    $scope.grid[i].mouseGene.styleClass = "orthoGeneBox";
-                 } else {
-                    $scope.grid[i].mouseGene.styleClass = "geneBox";
-                 }
+                    if ($scope.annotationMap[$scope.grid[i].mouseGene.rgdId]) {
+                        $scope.grid[i].mouseGene.styleClass = "orthoGeneBox";
+                    } else {
+                        $scope.grid[i].mouseGene.styleClass = "geneBox";
+                    }
 
-                 $scope.grid[i].ratGene = $scope.ratGenes[i];
-                 $scope.grid[i].ratGene.species = "Rat";
+                    $scope.grid[i].ratGene = $scope.genes["Rat"][i];
+                    $scope.grid[i].ratGene.species = "Rat";
 
-                 if ($scope.annotationMap[$scope.grid[i].ratGene.rgdId]) {
-                 $scope.grid[i].ratGene.styleClass = "orthoGeneBox";
-                 } else {
-                 $scope.grid[i].ratGene.styleClass = "geneBox";
-                 }
-                 }
+                    if ($scope.annotationMap[$scope.grid[i].ratGene.rgdId]) {
+                        $scope.grid[i].ratGene.styleClass = "orthoGeneBox";
+                    } else {
+                        $scope.grid[i].ratGene.styleClass = "geneBox";
+                    }
+                }
 
             }
-
 
             ctrl.buildGrid = function() {
 
@@ -185,18 +181,18 @@
                     $scope.grid[row] = new Object();
 
                     if (gene.speciesTypeKey == 1) {
-                        $scope.humanGenes[$scope.humanGenes.length] = gene;
+                        $scope.genes["Human"][$scope.genes["Human"].length] = gene;
                         $scope.grid[row].humanGene = gene;
                         $scope.grid[row].humanGene.species = "Human";
                         $scope.grid[row].humanGene.styleClass = "orthoGeneBox";
                     }else if (gene.speciesTypeKey == 2) {
-                        $scope.mouseGenes[$scope.mouseGenes.length] = gene;
+                        $scope.genes["Mouse"][$scope.genes["Mouse"].length] = gene;
                         $scope.grid[row].mouseGene = gene;
                         $scope.grid[row].mouseGene.species = "Mouse";
                         $scope.grid[row].mouseGene.styleClass = "orthoGeneBox";
 
                     }else if (gene.speciesTypeKey == 3) {
-                        $scope.ratGenes[$scope.ratGenes.length] = gene;
+                        $scope.genes["Rat"][$scope.genes["Rat"].length] = gene;
                         $scope.grid[row].ratGene = gene;
                         $scope.grid[row].ratGene.species = "Rat";
                         $scope.grid[row].ratGene.styleClass = "orthoGeneBox";
@@ -213,7 +209,7 @@
                         }
 
                         if (ortho.speciesTypeKey == 1) {
-                            $scope.humanGenes[$scope.humanGenes.length] = ortho;
+                            $scope.genes["Human"][$scope.genes["Human"].length] = ortho;
                             $scope.grid[row].humanGene = ortho;
                             $scope.grid[row].humanGene.species = "Human";
 
@@ -224,7 +220,7 @@
                             }
 
                         }else if (ortho.speciesTypeKey == 2) {
-                            $scope.mouseGenes[$scope.mouseGenes.length] = ortho;
+                            $scope.genes["Mouse"][$scope.genes["Mouse"].length] = ortho;
                             $scope.grid[row].mouseGene = ortho;
                             $scope.grid[row].mouseGene.species = "Mouse";
 
@@ -236,7 +232,7 @@
 
 
                         }else if (ortho.speciesTypeKey == 3) {
-                            $scope.ratGenes[$scope.ratGenes.length] = ortho;
+                            $scope.genes["Rat"][$scope.genes["Rat"].length] = ortho;
                             $scope.grid[row].ratGene = ortho;
                             $scope.grid[row].ratGene.species = "Rat";
 
@@ -269,7 +265,7 @@
 
                 $http({
                     method: 'POST',
-                    url: "<%=host%>/rgdws/genes/annotation",
+                    url: $scope.serviceHost + "/rgdws/genes/annotation",
                     data: obj
 
                 }).then(function successCallback(response) {
@@ -300,7 +296,7 @@
 
                 $http({
                     method: 'POST',
-                    url: "<%=host%>/rgdws/genes/annotation",
+                    url: $scope.serviceHost + "/rgdws/genes/annotation",
                     data: obj
 
                 }).then(function successCallback(response) {
@@ -311,7 +307,6 @@
 
                     }
 
-                    //ctrl.initAnnotationMap();
                     ctrl.getOrthologs();
 
                 }, function errorCallback(response) {
@@ -319,8 +314,6 @@
                 });
 
             }
-
-
 
             ctrl.getOrthologs = function() {
                 //get Annotated Genes
@@ -335,7 +328,7 @@
 
                 $http({
                     method: 'POST',
-                    url: "<%=host%>/rgdws/genes/orthologs",
+                    url: $scope.serviceHost + "/rgdws/genes/orthologs",
                     data: obj
 
                 }).then(function successCallback(response) {
@@ -349,24 +342,22 @@
 
             }
 
-
-
-
             ctrl.getMGIMapping = function() {
 
                 var obj = {};
-                obj.rgdIds = [$scope.mouseGenes.length];
-                for (i=0; i<$scope.mouseGenes.length; i++) {
-                    obj.rgdIds[i] = $scope.mouseGenes[i].rgdId ;
+                obj.rgdIds = [$scope.genes["Mouse"].length];
+                for (i=0; i<$scope.genes["Mouse"].length; i++) {
+                    obj.rgdIds[i] = $scope.genes["Mouse"][i].rgdId ;
                 }
 
                 $http({
                     method: 'POST',
-                    url: "<%=host%>/rgdws/lookup/id/map/MGI",
+                    url: $scope.serviceHost + "/rgdws/lookup/id/map/MGI",
                     data: obj
 
                 }).then(function successCallback(response) {
-                    $scope.mgiMap = response.data;
+                    //$scope.mgiMap = response.data;
+                    $scope.xref["mgi"] = response.data;
 
                 }, function errorCallback(response) {
                     alert("ERRROR:" + response.data);
@@ -377,18 +368,18 @@
             ctrl.getGTEXMapping = function() {
 
                 var obj = {};
-                obj.rgdIds = [$scope.humanGenes.length];
-                for (i=0; i<$scope.humanGenes.length; i++) {
-                    obj.rgdIds[i] = $scope.humanGenes[i].rgdId ;
+                obj.rgdIds = [$scope.genes["Human"].length];
+                for (i=0; i<$scope.genes["Human"].length; i++) {
+                    obj.rgdIds[i] = $scope.genes["Human"][i].rgdId ;
                 }
 
                 $http({
                     method: 'POST',
-                    url: "<%=host%>/rgdws/lookup/id/map/GTEx",
+                    url: $scope.serviceHost + "/rgdws/lookup/id/map/GTEx",
                     data: obj
 
                 }).then(function successCallback(response) {
-                    $scope.gtexMap = response.data;
+                    $scope.xref["gtex"] = response.data;
 
                 }, function errorCallback(response) {
                     alert("ERRROR:" + response.data);
@@ -399,18 +390,18 @@
             ctrl.getHGNCMapping = function() {
 
                 var obj = {};
-                obj.rgdIds = [$scope.humanGenes.length];
-                for (i=0; i<$scope.humanGenes.length; i++) {
-                    obj.rgdIds[i] = $scope.humanGenes[i].rgdId ;
+                obj.rgdIds = [$scope.genes["Human"].length];
+                for (i=0; i<$scope.genes["Human"].length; i++) {
+                    obj.rgdIds[i] = $scope.genes["Human"][i].rgdId ;
                 }
 
                 $http({
                     method: 'POST',
-                    url: "<%=host%>/rgdws/lookup/id/map/HGNC",
+                    url: $scope.serviceHost + "/rgdws/lookup/id/map/HGNC",
                     data: obj
 
                 }).then(function successCallback(response) {
-                    $scope.hgncMap = response.data;
+                    $scope.xref["hgnc"] = response.data;
 
                 }, function errorCallback(response) {
                     alert("ERRROR:" + response.data);
@@ -423,7 +414,7 @@
 
                 $http({
                     method: 'GET',
-                    url: "<%=host%>/rgdws/ontology/term/" + termAcc,
+                    url: $scope.serviceHost + "/rgdws/ontology/term/" + termAcc,
 
                 }).then(function successCallback(response) {
                     $scope.term=response.data;
@@ -447,8 +438,8 @@
             ctrl.initialize();
 
             ctrl.removeGene = function (gene) {
-                for (var i = 0; i < $scope.genes.length; i++) {
-                    if ($scope.genes[i].species == gene.species && $scope.genes[i].symbol == gene.symbol) {
+                for (var i = 0; i < $scope.selectedGenes.length; i++) {
+                    if ($scope.selectedGenes[i].species == gene.species && $scope.selectedGenes[i].symbol == gene.symbol) {
                         this.deleteGene(i);
                     }
                 }
@@ -456,23 +447,12 @@
 
             ctrl.getGenesForSpeices = function (species) {
                 var geneArray = [];
-                for (var i = 0; i < $scope.genes.length; i++) {
-                    if ($scope.genes[i].species == species) {
-                        geneArray[geneArray.length] = $scope.genes[i];
+                for (var i = 0; i < $scope.selectedGenes.length; i++) {
+                    if ($scope.selectedGenes[i].species == species) {
+                        geneArray[geneArray.length] = $scope.selectedGenes[i];
                     }
                 }
                 return geneArray;
-            }
-
-
-            ctrl.navTopMed = function () {
-                msg="<br>Not Implemented";
-
-                $scope.modalTitle = "TopMed"
-                $('#myModal').modal('show');
-
-                document.getElementById("modalMsg").innerHTML = msg;
-
             }
 
             ctrl.navMgiExpression = function () {
@@ -514,8 +494,7 @@
                 }
 
                 for (var i=0; i<genes.length; i++) {
-                    link = "http://www.informatics.jax.org/gxd/marker/" +  $scope.mgiMap[genes[i].primaryId];
-                    //link = "https://www.gtexportal.org/home/gene/" + genes[i].symbol;
+                    link = "http://www.informatics.jax.org/gxd/marker/" +  $scope.xref["mgi"][genes[i].primaryId];
                     msg += "<a target='_blank' href='" + link + "'>" + genes[i].symbol + "</a><br>";
                 }
 
@@ -569,12 +548,12 @@
 
                 var geneString = "";
                 for (var i=0; i<genes.length; i++) {
-                        geneString += genes[i].symbol + ","
+                    geneString += genes[i].symbol + ","
                 }
 
-                    link = "https://www.gtexportal.org/home/gene/" + geneString;
-                    window.open(link);
-                    return;
+                link = "https://www.gtexportal.org/home/gene/" + geneString;
+                window.open(link);
+                return;
 
                 $scope.modalTitle="GTex Expression";
                 $('#myModal').modal('show');
@@ -599,17 +578,12 @@
                 var geneString = "";
                 for (var i=0; i<genes.length; i++) {
                     geneString += genes[i].symbol + ","
-
-                    //link = "https://gtexportal.org/home/multiGeneQueryPage/" + genes[i].symbol;
-                    // msg += "<a target='_blank' href='" + link + "'>" + genes[i].symbol + "</a><br>";
                 }
 
 
-//                if (genes.length == 1) {
                 link = "https://gtexportal.org/home/multiGeneQueryPage/" + geneString;
                 window.open(link);
                 return;
-//                }
 
                 $scope.modalTitle="GTex Expression";
                 $('#myModal').modal('show');
@@ -626,15 +600,15 @@
                 document.getElementById("Mouse_div").style.display="none";
                 document.getElementById("Rat_div").style.display="none";
 
-                for (var i = 0; i < $scope.genes.length; i++) {
-                    document.getElementById($scope.genes[i].species + "_div").style.display="block";
+                for (var i = 0; i < $scope.selectedGenes.length; i++) {
+                    document.getElementById($scope.selectedGenes[i].species + "_div").style.display="block";
                 }
 
 
-                var first = $scope.genes[0].species;
+                var first = $scope.selectedGenes[0].species;
                 $scope.callbackFunction=callbackFunction;
-                for (var i = 1; i < $scope.genes.length; i++) {
-                    if ($scope.genes[i].species != first) {
+                for (var i = 1; i < $scope.selectedGenes.length; i++) {
+                    if ($scope.selectedGenes[i].species != first) {
                         $('#speciesModal').modal('show');
                         return;
                     }
@@ -649,11 +623,7 @@
 
                 $scope.callbackFunction();
 
-
-
             }
-
-
 
             ctrl.navAGRGene = function (reset) {
 
@@ -666,7 +636,6 @@
                     return;
                 }
 
-
                 var msg = "<br>More than one " + $scope.speciesSelected + " human gene has been selected.  Please select a gene from the list below to view report at the Alliance of Genome Resources<br><br>";
                 var link=""
 
@@ -678,16 +647,13 @@
 
                 msg += ctrl.formatTableHGNC(genes, "http://www.alliancegenome.org/gene/");
 
-                var id= $scope.hgncMap[genes[0].primaryId];
+                var id= $scope.xref["hgnc"][genes[0].primaryId];
                 if ($scope.speciesSelected == "Mouse") {
-                    id=$scope.mgiMap[genes[0].primaryId];
+                    //id=$scope.mgiMap[genes[0].primaryId];
+                    id=$scope.xref["mgi"][genes[0].primaryId];
                 }else if ($scope.speciesSelected == "Rat") {
                     id="RGD:" + genes[0].primaryId;
                 }
-
-
-
-                //alert(JSON.stringify(genes[0]));
 
                 if (genes.length == 1) {
                     link = "http://www.alliancegenome.org/gene/" + id;
@@ -715,14 +681,8 @@
 
                 msg += this.formatTableMGI(genes, "http://www.informatics.jax.org/marker/");
 
-                /*
-                for (var i=0; i<genes.length; i++) {
-                    link = "http://www.informatics.jax.org/marker/" + $scope.mgiMap[genes[i].primaryId];
-                    msg += "<a target='_blank' href='" + link + "'>" + genes[i].symbol + "</a><br>";
-                }
-                */
                 if (genes.length == 1) {
-                    link = "http://www.informatics.jax.org/marker/" + $scope.mgiMap[genes[0].primaryId];
+                    link = "http://www.informatics.jax.org/marker/" + $scope.xref["mgi"][genes[0].primaryId];
                     window.open(link);
                     return;
                 }
@@ -749,7 +709,7 @@
                 msg += this.formatTableHGNC(genes, "https://www.genenames.org/cgi-bin/gene_symbol_report?hgnc_id=");
 
                 if (genes.length == 1) {
-                    link = "https://www.genenames.org/cgi-bin/gene_symbol_report?hgnc_id=" + $scope.hgncMap[genes[0].primaryId];
+                    link = "https://www.genenames.org/cgi-bin/gene_symbol_report?hgnc_id=" + $scope.xref["hgnc"][genes[0].primaryId];
                     window.open(link);
                     return;
                 }
@@ -761,22 +721,17 @@
 
             }
 
-
             ctrl.formatTableClinvar = function(genes, url) {
 
                 var msg = "";
-
                 var modVal=10;
 
                 if (genes.length > 10) {
                     modVal = Math.round(genes.length / 4);
                 }
 
-
                 msg += "<div style=' float:left;'>";
                 for (var i=0; i<genes.length ; i++) {
-
-
                     link=url + genes[i].primaryId;
                     msg += "<div style='width:140px; font-size:18px; height:30px;'><a target='_blank' href='" + url +  genes[0].symbol + "[gene]" + "'>" + genes[i].symbol + "</a></div>";
 
@@ -790,7 +745,6 @@
                 return msg;
 
             }
-
 
             ctrl.formatTableMGI = function(genes, url) {
 
@@ -808,7 +762,7 @@
 
 
                     link=url + genes[i].primaryId;
-                    msg += "<div style='width:140px; font-size:18px; height:30px;'><a target='_blank' href='" + url +  $scope.mgiMap[genes[i].primaryId] + "'>" + genes[i].symbol + "</a></div>";
+                    msg += "<div style='width:140px; font-size:18px; height:30px;'><a target='_blank' href='" + url +  $scope.xref["mgi"][genes[i].primaryId] + "'>" + genes[i].symbol + "</a></div>";
 
                     if (i !=0 && i % modVal == 0) {
                         msg += "</div><div style='float:left;'>";
@@ -817,7 +771,7 @@
                 }
                 msg += "</div>";
 
-                return msg; 
+                return msg;
 
             }
 
@@ -894,9 +848,9 @@
                 msg += "<div style=' float:left;'>";
                 for (var i=0; i<genes.length ; i++) {
 
-                    var id= $scope.hgncMap[genes[i].primaryId];
+                    var id= $scope.xref["hgnc"][genes[i].primaryId];
                     if ($scope.speciesSelected == "Mouse") {
-                        id=$scope.mgiMap[genes[i].primaryId];
+                        id=$scope.xref["mgi"][genes[i].primaryId];
                     }else if ($scope.speciesSelected == "Rat") {
                         id="RGD:" + genes[i].primaryId;
                     }
@@ -915,8 +869,6 @@
 
             }
 
-
-
             ctrl.rgdGeneReport = function (){
 
                 var msg = "<br>More than one rat gene has been selected.  Please select a gene from the list below to view the report at RGD<br><br>";
@@ -929,12 +881,6 @@
 
                 msg += this.formatTable(genes, "https://rgd.mcw.edu/rgdweb/report/gene/main.html?id=");
 
-                /*
-                for (var i=0; i<genes.length; i++) {
-                        link="https://rgd.mcw.edu/rgdweb/report/gene/main.html?id=" +  genes[i].primaryId;
-                        msg += "<a target='_blank' href='https://rgd.mcw.edu/rgdweb/report/gene/main.html?id=" +  genes[i].primaryId + "'>" + genes[i].symbol + "</a><br>";
-                }
-                */
                 if (genes.length == 1) {
                     link="https://rgd.mcw.edu/rgdweb/report/gene/main.html?id=" +  genes[0].primaryId;
                     window.open(link);
@@ -943,8 +889,6 @@
 
                 $scope.modalTitle="Rat Genome Database: Gene Report"
                 $('#myModal').modal('show');
-
-                //alert(msg);
 
                 document.getElementById("modalMsg").innerHTML=msg;
 
@@ -962,14 +906,7 @@
 
                 var msg = "";
                 var link=""
-
-
                 var genes = this.getGenesForSpeices("Rat");
-
-                //if (genes.length > 500) {
-                    //alert(genes.length);
-                //}
-
 
                 if (genes.length==0) {
                     return;
@@ -1005,7 +942,6 @@
 
                 document.getElementById("modalMsg").innerHTML = msg;
 
-
             }
 
             ctrl.listToCSV = function (arr) {
@@ -1014,9 +950,9 @@
                 var count = 0;
                 for (var i=0; i<arr.length; i++) {
                     if (count == 0) {
-                        geneList = geneList + $scope.genes[i].symbol;
+                        geneList = geneList + $scope.selectedGenes[i].symbol;
                     } else {
-                        geneList = geneList + "," + $scope.genes[i].symbol;
+                        geneList = geneList + "," + $scope.selectedGenes[i].symbol;
                     }
                     count++;
                 }
@@ -1027,7 +963,6 @@
             ctrl.navGA = function (){
 
                 //check to see if more than one species has been selected.
-
                 var msg = "Multiple species selected.  Please select a species to submit gene list.";
 
                 var count = 0;
@@ -1060,13 +995,13 @@
                     listCount++;
                 }
 
-                for (var i=0; i<$scope.genes.length; i++) {
+                for (var i=0; i<$scope.selectedGenes.length; i++) {
 
-                    if ($scope.genes[i].species == "Rat") {
+                    if ($scope.selectedGenes[i].species == "Rat") {
                         foundRat=true;
-                    }else if ($scope.genes[i].species == "Mous e") {
+                    }else if ($scope.selectedGenes[i].species == "Mouse") {
                         foundMouse=true;
-                    }else if ($scope.genes[i].species == "Human") {
+                    }else if ($scope.selectedGenes[i].species == "Human") {
                         foundHuman=true;
                     }
 
@@ -1100,24 +1035,21 @@
                 //get Annotated Genes
                 var obj = {};
 
-               // alert($scope.termAcc);
                 obj.termAcc=$scope.termAcc;
                 obj.speciesTypeKeys = [1,2,3];
                 obj.evidenceCodes=$scope.selectedEvidenceCodes;
-                obj.ids=[$scope.genes.length];
+                obj.ids=[$scope.selectedGenes.length];
 
-                for (var i=0; i< $scope.genes.length; i++)  {
-                    obj.ids[i] = "" + $scope.genes[i].primaryId;
+                for (var i=0; i< $scope.selectedGenes.length; i++)  {
+                    obj.ids[i] = "" + $scope.selectedGenes[i].primaryId;
                 }
 
                 $http({
                     method: 'POST',
-                    url: "<%=host%>/rgdws/annotations/",
+                    url: $scope.serviceHost + "/rgdws/annotations/",
                     data: obj
 
                 }).then(function successCallback(response) {
-                    //$scope.annotatedGenes = response.data;
-                    //console.log(response.data[0].key);
 
                     var dump = "RGD ID,Object Symbol,Aspect,Evidence,Notes,Object Name,Qualifier,Species,Term,Term Accession,With Info\n";
                     for (var i=0; i< response.data.length; i++) {
@@ -1125,17 +1057,15 @@
                         console.log(ln);
                         dump += ln.annotatedObjectRgdId + "," +
                                 ln.objectSymbol + "," +
-                                        ln.aspect + "," +
-                                        ln.evidence + "," +
-                                        ln.notes + "," +
-                                        ln.objectName + "," +
-                                        ln.qualifier + "," +
-                                        ln.speciesTypeKey + "," +
-                                        ln.term + "," +
-                                        ln.termAcc + "," +
-                                        ln.withInfo + "\n";
-
-
+                                ln.aspect + "," +
+                                ln.evidence + "," +
+                                ln.notes + "," +
+                                ln.objectName + "," +
+                                ln.qualifier + "," +
+                                ln.speciesTypeKey + "," +
+                                ln.term + "," +
+                                ln.termAcc + "," +
+                                ln.withInfo + "\n";
                     }
 
                     var encodedUri = encodeURI( 'data:text/csv;charset=utf-8,' + dump);
@@ -1150,31 +1080,26 @@
                     alert("ERRROR:" + response.data);
                 });
 
-
             }
-
-
 
             ctrl.deleteGene = function(index) {
-                var obj = $scope.genes[index];
+                var obj = $scope.selectedGenes[index];
                 this.deselectGene(document.getElementById(obj.primaryId), obj.primaryId);
-                $scope.genes.splice(index, 1);
             }
-
 
             ctrl.updateTools = function() {
                 var foundHuman=false;
                 var foundRat=false;
                 var foundMouse=false;
 
-                for (var i = 0; i < $scope.genes.length; i++) {
-                    if ($scope.genes[i].species =='Human') {
+                for (var i = 0; i < $scope.selectedGenes.length; i++) {
+                    if ($scope.selectedGenes[i].species =='Human') {
                         foundHuman=true;
                     }
-                    if ($scope.genes[i].species =='Rat') {
+                    if ($scope.selectedGenes[i].species =='Rat') {
                         foundRat=true;
                     }
-                    if ($scope.genes[i].species =='Mouse') {
+                    if ($scope.selectedGenes[i].species =='Mouse') {
                         foundMouse=true;
                     }
 
@@ -1185,7 +1110,6 @@
                     var obj = document.getElementById("r" + i);
                     while (obj != null) {
                         obj.style.opacity=1;
-                        //obj.style.display="block";
                         i++;
                         obj = document.getElementById("r" + i);
 
@@ -1195,7 +1119,6 @@
                     var obj = document.getElementById("r" + i);
                     while (obj != null) {
                         obj.style.opacity=.5;
-                        //obj.style.display="none";
                         i++;
                         obj = document.getElementById("r" + i);
 
@@ -1207,7 +1130,6 @@
                     var obj = document.getElementById("m" + i);
                     while (obj != null) {
                         obj.style.opacity=1;
-                        //obj.style.display="block";
                         i++;
                         obj = document.getElementById("m" + i);
 
@@ -1217,7 +1139,6 @@
                     var obj = document.getElementById("m" + i);
                     while (obj != null) {
                         obj.style.opacity=.5;
-                        //obj.style.display="none";
                         i++;
                         obj = document.getElementById("m" + i);
 
@@ -1229,7 +1150,6 @@
                     var obj = document.getElementById("h" + i);
                     while (obj != null) {
                         obj.style.opacity=1;
-                        //obj.style.display="block";
                         i++;
                         obj = document.getElementById("h" + i);
 
@@ -1239,22 +1159,17 @@
                     var obj = document.getElementById("h" + i);
                     while (obj != null) {
                         obj.style.opacity=.5;
-                        //obj.style.display="none";
                         i++;
                         obj = document.getElementById("h" + i);
-
                     }
-
                 }
                 if (foundHuman || foundRat || foundMouse) {
                     var i=1;
                     var obj = document.getElementById("a" + i);
                     while (obj != null) {
                         obj.style.opacity=1;
-                        //obj.style.display="block";
                         i++;
                         obj = document.getElementById("a" + i);
-
                     }
                     ctrl.showMenu();
                 }else {
@@ -1262,16 +1177,11 @@
                     var obj = document.getElementById("a" + i);
                     while (obj != null) {
                         obj.style.opacity=.5;
-                        //obj.style.display="none";
                         i++;
                         obj = document.getElementById("a" + i);
-
                     }
                     ctrl.hideMenu();
-
                 }
-
-
             }
 
             ctrl.hideMenu = function() {
@@ -1324,27 +1234,23 @@
 
             }
 
-
-
-
-
             ctrl.selectAll = function ($event,species) {
                 if (species=="Human") {
-                    if ($scope.allHuman) {
+                    if ($scope.all["Human"]) {
                         this.selectAllGenes(species);
                     }else {
                         this.deselectAllGenes(species);
                     }
                 }
                 if (species=="Mouse") {
-                    if ($scope.allMouse) {
+                    if ($scope.all["Mouse"]) {
                         this.selectAllGenes(species);
                     }else {
                         this.deselectAllGenes(species);
                     }
                 }
                 if (species=="Rat") {
-                    if ($scope.allRat) {
+                    if ($scope.all["Rat"]) {
                         this.selectAllGenes(species);
                     }else {
                         this.deselectAllGenes(species);
@@ -1356,15 +1262,14 @@
             ctrl.selectAllGenes = function (species) {
 
                 ctrl.deselectAllGenes(species);
-
                 var geneArray =[];
 
                 if (species == "Human") {
-                    geneArray=$scope.humanGenes;
+                    geneArray=$scope.genes["Human"];
                 }else if (species == "Mouse") {
-                    geneArray=$scope.mouseGenes;
+                    geneArray=$scope.genes["Mouse"];
                 }else if (species == "Rat") {
-                    geneArray=$scope.ratGenes;
+                    geneArray=$scope.genes["Rat"];
                 }
 
                 var i=0;
@@ -1388,11 +1293,11 @@
                 var geneArray =[];
 
                 if (species == "Human") {
-                    geneArray=$scope.humanGenes;
+                    geneArray=$scope.genes["Human"];
                 }else if (species == "Mouse") {
-                    geneArray=$scope.mouseGenes;
+                    geneArray=$scope.genes["Mouse"];
                 }else if (species == "Rat") {
-                    geneArray=$scope.ratGenes;
+                    geneArray=$scope.genes["Rat"];
                 }
 
                 var i=0;
@@ -1403,18 +1308,16 @@
                 }
             }
 
-
-
             ctrl.deSelectAllGenes = function ($event,species) {
 
                 var geneArray =[];
 
                 if (species == "Human") {
-                    geneArray=$scope.humanGenes;
+                    geneArray=$scope.genes["Human"];
                 }else if (species == "Mouse") {
-                    geneArray=$scope.mouseGenes;
+                    geneArray=$scope.genes["Mouse"];
                 }else if (species == "Rat") {
-                    geneArray=$scope.ratGenes;
+                    geneArray=$scope.genes["Rat"];
                 }
 
                 var i=0;
@@ -1426,15 +1329,14 @@
 
             }
 
-
             ctrl.select = function ($event,primaryId, symbol, species)
             {
                 //if already selected, deselect
                 var obj = $event.currentTarget;
                 //see if gene is already in the list
                 found=false;
-                for (var i=0; i< $scope.genes.length; i++) {
-                    if ($scope.genes[i].primaryId == primaryId) {
+                for (var i=0; i< $scope.selectedGenes.length; i++) {
+                    if ($scope.selectedGenes[i].primaryId == primaryId) {
                         found=true;
                     }
                 }
@@ -1449,11 +1351,10 @@
 
             ctrl.deselectGene = function (obj,primaryId) {
 
-                //var obj = $event.currentTarget;
-                for (var i=0; i< $scope.genes.length; i++) {
-                    if ($scope.genes[i].primaryId == primaryId) {
+                for (var i=0; i< $scope.selectedGenes.length; i++) {
+                    if ($scope.selectedGenes[i].primaryId == primaryId) {
 
-                        $scope.genes.splice(i, 1);
+                        $scope.selectedGenes.splice(i, 1);
 
                         if ($scope.annotationMap[primaryId]) {
                             obj.style.borderColor="#557A95";
@@ -1470,45 +1371,27 @@
             }
 
             ctrl.selectGene = function (obj, primaryId, symbol, species) {
-
-                //if (obj==null) alert(symbol);
-
                 obj.style.borderColor="#FEBE54";
                 obj.style.backgroundColor="#B0A295";
 
-                $scope.genes.push({'primaryId': primaryId, symbol: symbol, species: species})
+                $scope.selectedGenes.push({'primaryId': primaryId, symbol: symbol, species: species})
 
                 this.updateTools();
-               // this.colorGenes();
-
             }
-
         }
-
     ]);
 </script>
-
-
-<div>
-
-</div>
-
-
 
 
 <body  ng-cloak ng-app="dmPage">
 
 <div class="pageStyle" ng-controller="DMController as dm" id="DMController">
-
-
-
-
 <div class="container">
     <!-- Modal -->
     <div class="modal fade" id="myModal" role="dialog">
         <div class="modal-dialog modal-lg">
             <div class="modal-content" id="rgd-modal">
-                <div style="background-color:#2598C5; font-family:Arial; color:white; font-size:20px;padding:5px;">{{modalTitle}}</div>
+                <div class="modalTitle">{{modalTitle}}</div>
             <table align="center" style="margin:10px;" border="0">
                 <tr>
                     <td><div id="modalMsg"></div></td>
@@ -1527,7 +1410,7 @@
 
     <script>
         $('#speciesModal').on('hidden', function () {
-            alert("hey");
+            //alert("hey");
         })
     </script>
 
@@ -1537,13 +1420,11 @@
         <div class="modal fade" id="speciesModal" role="dialog">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content" id="rgd-species-modal">
-                    <div style="background-color:#2598C5; font-family:Arial; color:white; font-size:20px;padding:5px;">Select a species</div>
+                    <div class="modalTitle" >Select a species</div>
                     <br>&nbsp;&nbsp;You have more than one species selected.  Please select a species to continue<br><br>
-
-
-                        <div id="Human_div" style="font-size:25px; display:none; margin-left:20px; float:left;"><button class="btn btn-primary" ng-click="dm.selectSpecies('Human')">Human</button></div>
-                        <div id="Mouse_div" style="font-size:25px; display:none; margin-left:20px; float: left;" ><button type="button" ng-click="dm.selectSpecies('Mouse')" class="btn btn-primary">Mouse</button></div>
-                        <div id="Rat_div" style="font-size:25px; display:none; margin-left:20px; float:left;"><button class="btn btn-primary" ng-click="dm.selectSpecies('Rat')">Rat</button></div>
+                        <div class="speciesButton" id="Human_div" ><button class="btn btn-primary" ng-click="dm.selectSpecies('Human')">Human</button></div>
+                        <div class="speciesButton" id="Mouse_div" ><button type="button" ng-click="dm.selectSpecies('Mouse')" class="btn btn-primary">Mouse</button></div>
+                        <div class="speciesButton" id="Rat_div" ><button class="btn btn-primary" ng-click="dm.selectSpecies('Rat')">Rat</button></div>
 
                     </table>
                     <br>
@@ -1554,9 +1435,6 @@
             </div>
         </div>
     </div>
-
-
-
 
 <div class="pageTitleBar">
     <table border="0" width="95%">
@@ -1575,42 +1453,32 @@
 
 </div>
 
-
-
-
 <div class="diseaseTitle">{{term.term}}</div>
     <br>
-    <span style="background-color:#7395AE; color:#7395AE;height:10px;width:30px;border-radius:3px;margin-top:10px;margin-left:27px;">&nbsp;&nbsp;&nbsp;&nbsp;</span> Denotes Gene Annotated to <b>{{ term.term }}</b> - Orthology via <b>DIOPT</b>
+    <span class="diseaseSubTitle">&nbsp;&nbsp;&nbsp;&nbsp;</span> Denotes Gene Annotated to <b>{{ term.term }}</b> - Orthology via <b>DIOPT</b>
 
+    <div class="evidenceSelector"><span style="font-weight:700;">Evidence:</span>
+        <input ng-model="evidence['EXP']" ng-change="dm.selectEvidence($event)" type="checkbox"/>EXP
+        <input ng-model="evidence['IAGP']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IAGP
+        <input ng-model="evidence['IDA']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IDA
+        <input ng-model="evidence['IED']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IED
+        <input ng-model="evidence['IEP']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IEP
+        <input ng-model="evidence['IGI']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IGI
+        <input ng-model="evidence['IMP']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IMP
+        <input ng-model="evidence['IPI']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IPI
+        <input ng-model="evidence['IPM']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IPM
+        <input ng-model="evidence['QTM']" ng-change="dm.selectEvidence($event)" type="checkbox"/>QTM
+        <input ng-model="evidence['ISS']" ng-change="dm.selectEvidence($event)" type="checkbox"/>ISS
+        <input ng-model="evidence['ISO']" ng-change="dm.selectEvidence($event)" type="checkbox"/>ISO
+    </div>
 
-
-
-<div style="margin-left:28px;margin-top:10px;margin-bottom:10px;"><span style="font-weight:700;">Evidence:</span>
-    <input ng-model="evidence['EXP']" ng-change="dm.selectEvidence($event)" type="checkbox"/>EXP
-    <input ng-model="evidence['IAGP']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IAGP
-    <input ng-model="evidence['IDA']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IDA
-    <input ng-model="evidence['IED']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IED
-    <input ng-model="evidence['IGI']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IGI
-    <input ng-model="evidence['IMP']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IMP
-    <input ng-model="evidence['IPI']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IPI
-    <input ng-model="evidence['IPM']" ng-change="dm.selectEvidence($event)" type="checkbox"/>IPM
-    <input ng-model="evidence['QTM']" ng-change="dm.selectEvidence($event)" type="checkbox"/>QTM
-    <input ng-model="evidence['ISS']" ng-change="dm.selectEvidence($event)" type="checkbox"/>ISS
-    <input ng-model="evidence['ISO']" ng-change="dm.selectEvidence($event)" type="checkbox"/>ISO
-</div>
-
-
-
-
-
-
-    <table cellspacing=0 cellpadding=0 border="0" style="margin-left:20px; padding-left:5px; border-bottom:2px solid #B1A296;">
+    <table cellspacing=0 cellpadding=0 border="0" class="speciesSelector">
         <tr>
-            <td align="center" width="112"><div class="speciesHeader">Human<input ng-model="allHuman" ng-change="dm.selectAll($event,'Human')" type="checkbox"/></div></td>
+            <td align="center" width="112"><div class="speciesHeader">Human<input ng-model="all['Human']" ng-change="dm.selectAll($event,'Human')" type="checkbox"/></div></td>
             <td width="19">&nbsp;</td>
-            <td align="center" width="112"><div class="speciesHeader">Mouse<input  ng-model="allMouse"  ng-change="dm.selectAll($event,'Mouse')"  type="checkbox"/></div></td>
+            <td align="center" width="112"><div class="speciesHeader">Mouse<input  ng-model="all['Mouse']"  ng-change="dm.selectAll($event,'Mouse')"  type="checkbox"/></div></td>
             <td width="19">&nbsp;</td>
-            <td align="center" width="112"><div class="speciesHeader">Rat<input  ng-model="allRat"  ng-change="dm.selectAll($event,'Rat')"  type="checkbox"/></div></td>
+            <td align="center" width="112"><div class="speciesHeader">Rat<input  ng-model="all['Rat']"  ng-change="dm.selectAll($event,'Rat')"  type="checkbox"/></div></td>
             <td width="80">&nbsp;</td>
             <td width="150" valign="top" class="speciesHeader">Genes Selected</td>
         </TR>
@@ -1627,7 +1495,7 @@
                                 <span ng-bind-html="row.humanGene.symbol"></span>
                             </div>
                         </td>
-                        <td align="center" style="font-size:9px; color:#7395AE;" width="10">
+                        <td align="center" class="geneTableSpacer" width="10">
                             --
                         </td>
                         <td width="110">
@@ -1636,7 +1504,7 @@
 
                             </div>
                         </td>
-                        <td align="center" style="font-size:9px; color:#7395AE;" width="10">
+                        <td align="center" class="geneTableSpacer" width="10">
                             --
                         </td>
                         <td width="110">
@@ -1653,9 +1521,9 @@
                 <table >
                 <td width="30"><img src="/navigator/common/images/red-arrow-small.png"/></td>
                 <td width="175"  valign="top">
-                    <div class="selectedList" >
+                    <div class="geneSelectedList" >
 
-                        <div ng-repeat="gene in genes" style="border-bottom:1px solid black;padding-top:5px; padding-bottom:5px;vertical-align:top;">
+                        <div ng-repeat="gene in selectedGenes" class="geneSelectedListItem" >
                             <img ng-click="dm.removeGene(gene)" src="/navigator/common/images/del.jpg"/>&nbsp;&nbsp;&nbsp;&nbsp;<span ng-bind-html="gene.symbol"></span><span style="font-size:10px;">&nbsp;({{gene.species}})</span>
                         </div>
                     </div>
@@ -1667,24 +1535,22 @@
 
     <br><br><hr>
 
-
-
-<div style="border:0px solid black; height:500px;overflow-y:scroll;padding-right:10px;">
+<div class="analysisMenu">
 
     <div class="toolMenu" id="analysisMenu">
 
     <table border="0">
-        <tr><td colspan="3" style="background-color:#2598C5; color:white;" class="diseaseTitle">Gene&nbsp;Set&nbsp;Analysis</td></tr>
+        <tr><td colspan="3" class="analysisMenuTitle">Gene&nbsp;Set&nbsp;Analysis</td></tr>
         <tr><td>&nbsp;</td></tr>
         <tr>
-            <td  colspan="3"><div class="toolMenuGroupTitle" >Gene Reports</div></td>
+            <td colspan="3"><div class="toolMenuGroupTitle" >Gene Reports</div></td>
         </tr>
         <tr>
             <td>
                 <div id="a1"  class="toolOption" ng-click="dm.navAGRGene(true)" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
                         <tr>
-                            <td><img src="/navigator/common/images/alliance60.png" height="10" idth="100"/></td>
+                            <td><img src="/navigator/common/images/alliance60.png" height="10" /></td>
                             <td>Alliance<br>
                             </td>
                         </tr>
@@ -1780,20 +1646,6 @@
                 </div>
 
             </td>
-            <!--
-            <td>
-                <div id="h4" class="toolOption" ng-click="dm.navTopMed()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
-                    <table>
-                        <tr>
-                            <td><img src="/navigator/common/images/dbGaP_logo.jpg" height="10" idth="10"/></td>
-                            <td>TOPMed<br>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-
-            </td>
-            -->
             <td>
                 <div id="r2" class="toolOption" ng-click="dm.navVV()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
@@ -1805,7 +1657,7 @@
                 </div>
 
             </td>
-        </tr><tr>
+            </tr><tr>
             <td>
                 <div id="r3" class="toolOption" ng-click="dm.navVVDamaging()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
@@ -1818,23 +1670,10 @@
 
             </td>
         </tr>
-
         <tr>
             <td colspan="3"><div class="toolMenuGroupTitle" >Additional&nbsp;Analysis</div></td>
         </tr>
         <tr>
-            <!--
-            <td>
-                <div id="r4" class="toolOption" ng-click="dm.navOlga()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
-                    <table>
-                        <tr>
-                            <td><img ng-click="dm.navOlga()" src="/navigator/common/images/olga60.png" height="10" idth="100"/></td>
-                            <td>OLGA</td>
-                        </tr>
-                    </table>
-                </div>
-            </td>
-         -->
             <td>
                 <div id="r4" class="toolOption" ng-click="dm.navGA()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
                     <table>
@@ -1858,31 +1697,15 @@
             </td>
 
         </tr>
-        <!--
-        <tr>
-            <td>
-                <div id="a1" class="toolOption" ng-click="dm.navReferences()" ng-mouseover="dm.mouseOver($event)" ng-mouseleave="dm.mouseOut($event)">
-                    <table>
-                        <tr>
-                            <td><img ng-click="dm.navReferences()" src="/navigator/common/images/pubmed.png" height="10" idth="100"/></td>
-                            <td>References</td>
-                        </tr>
-                    </table>
-                </div>
-
-            </td>
-        </tr>
-        -->
     </table>
 
-
         <br>
         <br>
         <br>
         <br>
         <br>
 
-        <div class="diseaseDescription2"><span style="font-size:16px; font-weight:700">{{ term.term }}</span><br>{{ term.definition }}</div>
+        <div class="termDescription"><span class="termTitle">{{ term.term }}</span><br>{{ term.definition }}</div>
 
 </div>
 
@@ -1891,7 +1714,7 @@
 
 </body>
 
-<script>
 
 
-</script>
+
+</html>
